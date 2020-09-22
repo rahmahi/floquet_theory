@@ -12,6 +12,7 @@ try:
     import skcuda.magma as magma
 
     useScipy = False
+    #raise(Exception)
 except Exception as err:
     print("#", err)
     print("# Cannot import scikit-cuda. Fall back to scipy.linalg")
