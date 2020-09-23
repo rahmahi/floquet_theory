@@ -3,12 +3,11 @@ import multiprocessing as mp
 import queue  # imported for using queue.Empty exception
 import numpy as np
 import time
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import gpu_linalg
 from odeintw import odeintw
 
 nprocs = 2
-
 
 def get_eigsys(lock, mat, task_params, task_output):
     while True:
@@ -47,6 +46,31 @@ def floquet_col(ic, h, p):
 
 
 def run_floquet(p):
+    """
+    Obtains Floquet Eigenvalues and Eigenvectors of a Hamiltonian matrix of the type
+    \\begin{equation}
+    H(t) = H_0 + h_0 \\cos{\\omega t} H_1,
+    \\end{equation}
+    by evolving over one time period $T=2\\pi/\\omega$ each column of a  unit matrix as
+    an initial condition of the Schrodinger equation
+
+    H |\\psi\\rangle = i \\partial_t |\\psi\rangle,
+
+    in order to obtain the monodromy matrix, which has eigenvalues $e^{i\\epsilon T}$ for quasienergies $\\epsilon$
+
+    Parameters:     p : Dictionary of the type {"omega": omega, "amps": amps, "hamilt": (ham0, ham1)}, where
+                        omega : Drive Frequency
+                        amps  : Iterable of drive amplitudes
+                        ham0  : Matrix $H_0$ as numpy array of dimensions = 2
+                        ham1  : Matrix $H_1$ as numpy array of dimensions = 2
+
+    Returns:        esys : Iterable of the same dimensions as p["amps"], where
+                           each iteration returns a tuple (a, E, U) where
+                           a : amplitude taken from input iterable
+                           E : array of Floquet quasienergies $\\epsilon$ of the same size as $H_0$[:,0]
+                           U : numpy array of column ordered eigenvectors of the size $H_0$
+    """
+
     h0, _ = p["hamilt"]
     rows, _ = np.shape(h0)
     # Default process for linux is forked, which CUDA does not accept. Change to spawn
@@ -99,21 +123,21 @@ def run_floquet(p):
         # Now, unshuffle the evecs
         for a, b in swap_idx:
             evecs[:, [b, a]] = evecs[:, [a, b]]
+            evals[[b, a]] = evals[[a, b]]
         count += 1
+        eigsystems_list[count] = amp, evals, evecs
 
-    return True
+    return eigsystems_list
 
 
-def harmonic_osc_floquet_evals():
-    maxlev = 20
-    lamb = np.linspace(0.0, 10.0, 1000)
-    w = 2.11
-    qens = np.array([((2 * n + 1) + lamb ** 2 / (2 * (w ** 2 - 4))) % w for n in range(maxlev)])
-
-    for n in range(maxlev):
-        plt.scatter(lamb, qens[n, :], s=5, c='b')
-
-    plt.show()
+# def harmonic_osc_floquet_evals():
+#    maxlev = 20
+#    lamb = np.linspace(0.0, 10.0, 1000)
+#    w = 2.11
+#    qens = np.array([((2 * n + 1) + lamb ** 2 / (2 * (w ** 2 - 4))) % w for n in range(maxlev)])
+#    for n in range(maxlev):
+#        plt.scatter(lamb, qens[n, :], s=5, c='b')
+#    plt.show()
 
 
 if __name__ == '__main__':
