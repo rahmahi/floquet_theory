@@ -37,11 +37,12 @@ def get_eigsys(lock, mat, task_params, task_output):
 
 def floquet_col(ic, h, p):
     freq = p["omega"]
+    h0 = p["dc"]
     und, drv = p["hamilt"]
     T = 2.0 * np.pi / freq
     times = np.linspace(0.0, T, 1000, endpoint=True)
-    sol = odeintw(lambda psi, t, undriven, driven, amp, f: -1j * np.dot(undriven + driven * amp * np.sin(f * t), psi),
-                  ic, times, args=(und, drv, h, freq))
+    sol = odeintw(lambda psi, t, undriven, driven, amp, f: -1j * np.dot(undriven + (driven * amp * np.sin(f * t) + h0), psi),
+                  ic, times, args=(und, drv, h, h0, freq))
     return sol[-1]
 
 
@@ -49,7 +50,7 @@ def run_floquet(p):
     """
     Obtains Floquet Eigenvalues and Eigenvectors of a Hamiltonian matrix of the type
     \\begin{equation}
-    H(t) = H_0 + h_0 \\cos{\\omega t} H_1,
+    H(t) = H_0 + \\left( h \\cos{\\omega t} + h_0 \\right) H_1,
     \\end{equation}
     by evolving over one time period $T=2\\pi/\\omega$ each column of a  unit matrix as
     an initial condition of the Schrodinger equation
@@ -58,9 +59,10 @@ def run_floquet(p):
 
     in order to obtain the monodromy matrix, which has eigenvalues $e^{i\\epsilon T}$ for quasienergies $\\epsilon$
 
-    Parameters:     p : Dictionary of the type {"omega": omega, "amps": amps, "hamilt": (ham0, ham1)}, where
+    Parameters:     p : Dictionary of the type {"omega": omega, "amps": amps, "dc": h_0 ,"hamilt": (ham0, ham1)}, where
                         omega : Drive Frequency
                         amps  : Iterable of drive amplitudes
+                        dc    : DC offset h_0
                         ham0  : Matrix $H_0$ as numpy array of dimensions = 2
                         ham1  : Matrix $H_1$ as numpy array of dimensions = 2
 
@@ -145,5 +147,5 @@ if __name__ == '__main__':
     amps = np.linspace(60.0, 60.3, 4)
     ham0 = 0.5 * np.array([[0, 1], [1, 0]])
     ham1 = 0.5 * np.array([[1, 0], [0, -1]])
-    params = {"omega": omega, "amps": amps, "hamilt": (ham0, ham1)}
+    params = {"omega": omega, "amps": amps, "dc": 0.1,"hamilt": (ham0, ham1)}
     run_floquet(params)
