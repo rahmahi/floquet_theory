@@ -7,7 +7,7 @@ import time
 import gpu_linalg
 from odeintw import odeintw
 
-nprocs = 2
+nprocs = 1
 
 def get_eigsys(lock, mat, task_params, task_output):
     while True:
@@ -41,7 +41,7 @@ def floquet_col(ic, h, p):
     und, drv = p["hamilt"]
     T = 2.0 * np.pi / freq
     times = np.linspace(0.0, T, 1000, endpoint=True)
-    sol = odeintw(lambda psi, t, undriven, driven, amp, f: -1j * np.dot(undriven + (driven * amp * np.sin(f * t) + h0), psi),
+    sol = odeintw(lambda psi, t, undriven, driven, amp, h0, f: -1j * np.dot(undriven + (driven * amp * np.sin(f * t) + h0), psi),
                   ic, times, args=(und, drv, h, h0, freq))
     return sol[-1]
 
@@ -81,7 +81,7 @@ def run_floquet(p):
     eigsystems_queue = mp.Queue()
 
     # Create task queue
-    for h in params["amps"]:
+    for h in p["amps"]:
         amplitude_queue.put(h)
 
     # Creating floquet translation matrix and diagonalization processes
@@ -89,10 +89,10 @@ def run_floquet(p):
     lock = mp.Lock()
     idt = np.eye(rows)
     start_matrix = idt + 1j * np.zeros_like(idt)
-    for h in params["amps"]:
+    for h in p["amps"]:
         # Generate Periodic Translation matrix here.
-        with mp.Pool(processes=nprocs) as p:
-            umat_t = p.starmap(floquet_col, [(ic, h, params) for ic in start_matrix])
+        with mp.Pool(processes=nprocs) as pool:
+            umat_t = pool.starmap(floquet_col, [(ic, h, p) for ic in start_matrix])
             umat = np.array(umat_t).T
         proc_diag = mp.Process(target=get_eigsys, args=(lock, umat, amplitude_queue, eigsystems_queue))
         diag_processes.append(proc_diag)
@@ -126,8 +126,8 @@ def run_floquet(p):
         for a, b in swap_idx:
             evecs[:, [b, a]] = evecs[:, [a, b]]
             evals[[b, a]] = evals[[a, b]]
-        count += 1
         eigsystems_list[count] = amp, evals, evecs
+        count += 1
 
     return eigsystems_list
 
