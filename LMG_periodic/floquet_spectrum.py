@@ -76,7 +76,7 @@ def run_floquet(p):
     h0, _ = p["hamilt"]
     rows, _ = np.shape(h0)
     # Default process for linux is forked, which CUDA does not accept. Change to spawn
-    mp.set_start_method('spawn')
+    #mp.set_start_method('spawn')
     amplitude_queue = mp.Queue()
     eigsystems_queue = mp.Queue()
 
