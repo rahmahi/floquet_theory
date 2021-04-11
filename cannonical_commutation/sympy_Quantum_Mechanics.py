@@ -1,6 +1,6 @@
 from __future__ import division
 import sys
-sys.path.insert(0, "~/.local/lib/python3.6/site-packages")
+#sys.path.insert(0, "~/.local/lib/python3.6/site-packages")
 
 import sympy
 from sympy import *
